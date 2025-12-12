@@ -24,6 +24,7 @@ public class Reajustesalario {
         System.out.println("--SALARIO REAJUSTADO COM OS 15%--");
         String reajuste = String.format(" %.2f", total);
         System.out.print("RS "+ reajuste);
+        entrada.close();
        
     }
 }
