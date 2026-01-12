@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detector de Mão</title>
-    
+    <title>Detector de Mão (1-5)</title>
+
     <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-
-    <!-- TensorFlow.js e KNN Classifier -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
 
     <style>
         :root {
@@ -45,13 +44,17 @@
             background: #000;
         }
 
-        .input_video { display: none; }
-        
+        .input_video {
+            display: none;
+        }
+
         .output_canvas {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Mantém proporção sem esticar */
-            transform: scaleX(-1); /* Espelhar */
+            object-fit: contain;
+            /* Mantém proporção sem esticar */
+            transform: scaleX(-1);
+            /* Espelhar */
         }
 
         /* Interface Sobreposta */
@@ -65,7 +68,8 @@
             align-items: center;
             gap: 10px;
             z-index: 10;
-            pointer-events: none; /* Deixa clicar no vídeo se necessário */
+            pointer-events: none;
+            /* Deixa clicar no vídeo se necessário */
         }
 
         .result-box {
@@ -94,56 +98,12 @@
             margin-top: 5px;
         }
 
-        /* Barra de Controles Inferior */
-        .controls {
-            position: absolute;
-            bottom: 30px;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 15px 25px;
-            border-radius: 50px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            pointer-events: auto;
-            border: 1px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .btn-upload {
-            background: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            border: 1px solid #555;
-            cursor: pointer;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-
-        .btn-upload:hover {
-            background: #444;
-            border-color: white;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            background-color: #ff4444;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ff4444;
-        }
-
-        .status-text {
-            font-size: 0.9rem;
-            color: #aaa;
-        }
-
         .loading-screen {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: #121212;
             z-index: 100;
             display: flex;
@@ -154,6 +114,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="loading-screen" id="loader">Inicializando Sistema...</div>
@@ -163,20 +124,10 @@
         <canvas class="output_canvas"></canvas>
 
         <div class="hud">
-            <div class="result-box" id="display-box" style="opacity: 0.5;">
+            <div class="result-box" id="display-box">
                 <p class="result-letter" id="main-text">-</p>
-                <div class="result-conf" id="conf-text">Aguardando Modelo...</div>
+                <div class="result-conf" id="conf-text">Mostre sua mão</div>
             </div>
-        </div>
-
-        <div class="controls">
-            <div class="status-dot" id="status-dot"></div>
-            <span class="status-text" id="status-msg">Modelo não carregado</span>
-            
-            <label class="btn-upload">
-                📂 Importar JSON
-                <input type="file" id="model-upload" accept=".json" style="display: none;" onchange="loadModel(this)">
-            </label>
         </div>
     </div>
 
@@ -188,26 +139,19 @@
         const mainText = document.getElementById('main-text');
         const confText = document.getElementById('conf-text');
         const displayBox = document.getElementById('display-box');
-        const statusDot = document.getElementById('status-dot');
-        const statusMsg = document.getElementById('status-msg');
         const loader = document.getElementById('loader');
-
-        // --- Estado do Sistema ---
-        let classifier;
-        let isModelLoaded = false;
 
         // --- Inicialização ---
         async function init() {
-            // Inicializa KNN
-            classifier = knnClassifier.create();
-            
             // Configura Câmera e MediaPipe
-            const hands = new Hands({locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-            }});
+            const hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
 
             hands.setOptions({
-                maxNumHands: 1,
+                maxNumHands: 2, // Permite 2 mãos
                 modelComplexity: 1,
                 minDetectionConfidence: 0.7,
                 minTrackingConfidence: 0.7
@@ -217,7 +161,7 @@
 
             const camera = new Camera(videoElement, {
                 onFrame: async () => {
-                    await hands.send({image: videoElement});
+                    await hands.send({ image: videoElement });
                 },
                 width: 1280,
                 height: 720
@@ -235,110 +179,91 @@
 
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
+
             // Desenhar Imagem da Câmera
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
+            let totalFingers = 0;
+            let handsDetected = false;
+
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
+                handsDetected = true;
 
-                // Desenhar Esqueleto
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00ff88', lineWidth: 4});
-                drawLandmarks(canvasCtx, landmarks, {color: '#ffffff', lineWidth: 1, radius: 3});
+                // Itera sobre todas as mãos detectadas
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const landmarks = results.multiHandLandmarks[i];
+                    const handedness = results.multiHandedness[i].label; // 'Left' ou 'Right'
 
-                // Se o modelo estiver carregado, prever
-                if (isModelLoaded) {
-                    predictLetter(landmarks);
+                    // Desenhar Esqueleto
+                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00ff88', lineWidth: 4 });
+                    drawLandmarks(canvasCtx, landmarks, { color: '#ffffff', lineWidth: 1, radius: 3 });
+
+                    // Somar dedos desta mão
+                    totalFingers += countFingers(landmarks, handedness);
                 }
+
+                // Atualiza Interface
+                mainText.innerText = totalFingers;
+                confText.innerText = `Dedos levantados (Total)`;
+
+                displayBox.style.borderColor = "#00ff88";
+                displayBox.style.boxShadow = "0 0 30px rgba(0, 255, 136, 0.4)";
+                mainText.style.color = "#00ff88";
+
             } else {
-                // Se não detectar mão
-                if (isModelLoaded) {
-                    mainText.innerText = "...";
-                    confText.innerText = "Posicione a mão";
-                }
+                mainText.innerText = "-";
+                confText.innerText = "Posicione as mãos";
+
+                displayBox.style.borderColor = "#555";
+                displayBox.style.boxShadow = "none";
+                mainText.style.color = "#555";
             }
             canvasCtx.restore();
         }
 
-        // --- Função de Previsão ---
-        async function predictLetter(landmarks) {
-            // Converte landmarks para Tensor
-            const embedding = landmarks.map(l => [l.x, l.y, l.z]).flat();
-            const tensor = tf.tensor(embedding);
+        function countFingers(landmarks, handedness) {
+            const tips = [8, 12, 16, 20]; // Indicador, Médio, Anelar, Mínimo
+            const pips = [6, 10, 14, 18]; // Articulações inferiores correspondentes
 
-            try {
-                const result = await classifier.predictClass(tensor);
-                
-                if (result.label) {
-                    mainText.innerText = result.label;
-                    const confidence = Math.floor(result.confidences[result.label] * 100);
-                    confText.innerText = `Certeza: ${confidence}%`;
+            let count = 0;
 
-                    // Feedback visual baseado na confiança
-                    if (confidence > 80) {
-                        displayBox.style.borderColor = "#00ff88";
-                        displayBox.style.boxShadow = "0 0 30px rgba(0, 255, 136, 0.4)";
-                        mainText.style.color = "#00ff88";
-                    } else {
-                        displayBox.style.borderColor = "#ffff00";
-                        displayBox.style.boxShadow = "none";
-                        mainText.style.color = "#ffff00";
-                    }
+            // 1. Dedos (Exceto Polegar)
+            for (let i = 0; i < tips.length; i++) {
+                if (landmarks[tips[i]].y < landmarks[pips[i]].y) {
+                    count++;
                 }
-            } catch (error) {
-                console.error("Erro na previsão:", error);
-            } finally {
-                tensor.dispose(); // Limpa memória
             }
-        }
 
-        // --- Carregar Modelo JSON ---
-        function loadModel(input) {
-            const file = input.files[0];
-            if (!file) return;
+            // 2. Polegar
+            const thumbTip = landmarks[4];
+            const thumbIP = landmarks[3];
+            const indexMCP = landmarks[5];
+            const pinkyMCP = landmarks[17];
 
-            statusMsg.innerText = "Carregando...";
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const json = JSON.parse(e.target.result);
-                    
-                    // Verifica se o JSON tem a estrutura esperada do nosso treinador
-                    if (!json.dataset) {
-                        throw new Error("Formato de JSON inválido");
-                    }
+            let isThumbOpen = false;
 
-                    // Reconstrói os tensores para o KNN
-                    const dataset = json.dataset;
-                    const tensorObj = {};
-                    
-                    Object.keys(dataset).forEach((key) => {
-                        // Divide por 63 porque são 21 pontos * 3 coordenadas (x,y,z)
-                        tensorObj[key] = tf.tensor(dataset[key], [dataset[key].length / 63, 63]);
-                    });
-                    
-                    classifier.setClassifierDataset(tensorObj);
-                    
-                    // Atualiza Interface
-                    isModelLoaded = true;
-                    statusDot.style.backgroundColor = "#00ff88";
-                    statusDot.style.boxShadow = "0 0 10px #00ff88";
-                    statusMsg.innerText = "Modelo Ativo: " + file.name;
-                    displayBox.style.opacity = "1";
-                    mainText.innerText = "OK";
-                    confText.innerText = "Faça um sinal";
-                    
-                    console.log("Modelo carregado com sucesso.");
+            // Lógica baseada na orientação relativa da mão (Index vs Pinky)
+            // Isso funciona independente de espelhamento, mão esquerda/direita ou palma/costas
 
-                } catch(err) {
-                    console.error(err);
-                    alert("Erro ao ler o arquivo. Certifique-se que é o JSON gerado pelo treinador.");
-                    statusMsg.innerText = "Erro no arquivo";
-                    statusDot.style.backgroundColor = "red";
+            if (indexMCP.x < pinkyMCP.x) {
+                // Orientação: Polegar deve estar à Esquerda (X menor)
+                // Exemplo: Mão Direita (Palma) ou Mão Esquerda (Costas)
+                if (thumbTip.x < thumbIP.x) {
+                    isThumbOpen = true;
                 }
-            };
-            reader.readAsText(file);
+            } else {
+                // Orientação: Polegar deve estar à Direita (X maior)
+                // Exemplo: Mão Esquerda (Palma) ou Mão Direita (Costas)
+                if (thumbTip.x > thumbIP.x) {
+                    isThumbOpen = true;
+                }
+            }
+
+            if (isThumbOpen) {
+                count++;
+            }
+
+            return count;
         }
 
         // Inicia o app
@@ -346,4 +271,5 @@
 
     </script>
 </body>
+
 </html>
