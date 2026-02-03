@@ -1,0 +1,178 @@
+:root {
+    --glass-bg: rgba(20, 20, 35, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --accent: #00f2ff;
+    --text-main: #ffffff;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #050505;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-main);
+}
+
+#canvas-container {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+/* UI Panel - Glassmorphism */
+#ui-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    padding: 20px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    z-index: 10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: transform 0.3s ease;
+}
+
+h2 {
+    font-size: 1.2rem;
+    margin: 0 0 15px 0;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Sliders */
+input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    margin-top: -5px;
+}
+input[type=range]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
+
+/* Color Picker */
+input[type=color] {
+    width: 100%;
+    height: 35px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* Buttons Grid */
+.shape-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--glass-border);
+    color: white;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+}
+
+button:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: var(--accent);
+}
+
+button.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: bold;
+}
+
+button.highlight-btn {
+    grid-column: span 2;
+    background: linear-gradient(90deg, #ff0077, #7700ff);
+    border: none;
+    font-weight: bold;
+}
+
+/* Debug Panel */
+#debug-panel {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    width: 200px;
+    height: 150px;
+    background: black;
+    border: 2px solid var(--glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 10;
+    display: none; /* Hidden by default */
+}
+
+#debug-video, #debug-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1); /* Mirror for natural feel */
+}
+
+#debug-canvas {
+    z-index: 2;
+}
+
+.toggle-debug {
+    margin-top: 15px;
+    width: 100%;
+    font-size: 0.8rem;
+}
+
+/* Loading */
+#loader {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent);
+    font-size: 1.5rem;
+    z-index: 20;
+    pointer-events: none;
+    text-align: center;
+}
