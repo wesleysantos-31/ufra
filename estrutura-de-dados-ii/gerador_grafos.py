@@ -142,15 +142,12 @@ class GraphApp:
         fig, ax = plt.subplots(figsize=(6, 5))
         
         if self.G.number_of_nodes() > 0:
-            # Layout optimization: k controls node spacing. Default is 1/sqrt(n), we use value from slider.
             k_val = self.spacing_var.get()
             pos = nx.spring_layout(self.G, k=k_val, seed=42)
             
-            # Cores padrão
             node_colors = ['skyblue'] * self.G.number_of_nodes()
             edge_colors = ['gray'] * self.G.number_of_edges()
             
-            # Destaque para Caminho ou Busca
             if path_nodes:
                 # Mapeia nós para índices para colorir
                 node_list = list(self.G.nodes())
