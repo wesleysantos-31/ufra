@@ -271,6 +271,12 @@ function onResults(results) {
 
     // Desenhar debug se visível
     if (isDebugVisible) {
+        // Evita distorção ajustando as dimensões do canvas para a resolução real do vídeo
+        if (canvasElement.width !== results.image.width) {
+            canvasElement.width = results.image.width;
+            canvasElement.height = results.image.height;
+        }
+
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
@@ -362,8 +368,8 @@ const hands = new Hands({locateFile: (file) => {
 hands.setOptions({
     maxNumHands: 1,
     modelComplexity: 1,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
+    minDetectionConfidence: 0.7, // Valores mais altos reduzem falsos positivos e capturam a mão com mais firmeza
+    minTrackingConfidence: 0.7
 });
 
 hands.onResults(onResults);
@@ -372,8 +378,8 @@ const cameraUtils = new Camera(videoElement, {
     onFrame: async () => {
         await hands.send({image: videoElement});
     },
-    width: 320,
-    height: 240
+    width: 1280, // Resolução HD (16:9) para uma melhor visualização e detecção mais precisa
+    height: 720
 });
 
 // Iniciar câmera

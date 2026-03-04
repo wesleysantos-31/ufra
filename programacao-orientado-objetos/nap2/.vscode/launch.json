@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "cinema",
+            "request": "launch",
+            "mainClass": "cinema",
+            "projectName": "nap2_8df9df79"
+        },
+        {
+            "type": "java",
+            "name": "Executar cinema",
+            "request": "launch",
+            "mainClass": "cinema",
+            "projectName": "nap2"
+        }
+    ]
+}

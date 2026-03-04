@@ -134,8 +134,8 @@ button.highlight-btn {
     position: absolute;
     bottom: 20px;
     left: 20px;
-    width: 200px;
-    height: 150px;
+    width: 240px;
+    height: 135px; /* Proporção 16:9 para coincidir com a câmera HD */
     background: black;
     border: 2px solid var(--glass-border);
     border-radius: 12px;
