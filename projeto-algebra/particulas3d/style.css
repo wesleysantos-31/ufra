@@ -22,6 +22,18 @@ body {
     z-index: 1;
 }
 
+/* Overlay do esqueleto da mão (fullscreen, sobre o Three.js) */
+#hand-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2;
+    pointer-events: none;
+    /* Não captura cliques */
+}
+
 /* UI Panel - Glassmorphism */
 #ui-container {
     position: absolute;
@@ -66,6 +78,7 @@ input[type=range] {
     -webkit-appearance: none;
     background: transparent;
 }
+
 input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     height: 14px;
@@ -75,10 +88,11 @@ input[type=range]::-webkit-slider-thumb {
     cursor: pointer;
     margin-top: -5px;
 }
+
 input[type=range]::-webkit-slider-runnable-track {
     width: 100%;
     height: 4px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
 }
 
@@ -101,7 +115,7 @@ input[type=color] {
 }
 
 button {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--glass-border);
     color: white;
     padding: 8px;
@@ -112,7 +126,7 @@ button {
 }
 
 button:hover {
-    background: rgba(255,255,255,0.2);
+    background: rgba(255, 255, 255, 0.2);
     border-color: var(--accent);
 }
 
@@ -135,23 +149,27 @@ button.highlight-btn {
     bottom: 20px;
     left: 20px;
     width: 240px;
-    height: 135px; /* Proporção 16:9 para coincidir com a câmera HD */
+    height: 135px;
+    /* Proporção 16:9 para coincidir com a câmera HD */
     background: black;
     border: 2px solid var(--glass-border);
     border-radius: 12px;
     overflow: hidden;
     z-index: 10;
-    display: none; /* Hidden by default */
+    display: none;
+    /* Hidden by default */
 }
 
-#debug-video, #debug-canvas {
+#debug-video,
+#debug-canvas {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleX(-1); /* Mirror for natural feel */
+    transform: scaleX(-1);
+    /* Mirror for natural feel */
 }
 
 #debug-canvas {

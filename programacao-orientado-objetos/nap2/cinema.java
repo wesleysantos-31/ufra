@@ -10,269 +10,540 @@ public class cinema {
 
         try {
             // ================================
-            // 1. ABRINDO CONEXÃO COM O BANCO
+            // ABRINDO CONEXÃO COM O BANCO
             // ================================
             conn = DriverManager.getConnection("jdbc:mysql://127.0.0.1/cinema", "root", "");
             System.out.println("Conexão estabelecida com o banco 'cinema'!");
 
             // Exibindo as características do cinema
-            System.out.println("==================================");
-            System.out.println("======    CINEMA ATLAS    ======");
-            System.out.println("==================================");
-            System.out.println(" Endereço: Avenida Barão do Rio Branco, n° 250");
-            System.out.println(" Castanhal-Pará");
-            System.out.println(" Fone: (91) 3344-7821");
-            System.out.println("==================================\n");
+            System.out.println("\n==========================================");
+            System.out.println("=                                        =");
+            System.out.println("=          ** CINEMA ATLAS **            =");
+            System.out.println("=                                        =");
+            System.out.println("==========================================");
+            System.out.println("  Endereco: Av. Barao do Rio Branco");
+            System.out.println("            n 250 - Castanhal/PA");
+            System.out.println("  Fone: (91) 3344-7821");
+            System.out.println("==========================================\n");
 
             // ================================
-            // 2. INSERINDO NO BANCO (AUTO_INCREMENT)
+            // INSERINDO NO BANCO (ID FIXO)
             // ================================
-            // Passamos NULL para que o banco gere o número automaticamente
-            String sqlInsert = "INSERT INTO idcinema (idcinema) VALUES (NULL)";
+            int idFixo = 1;
+            String sqlInsert = "INSERT IGNORE INTO idcinema (idcinema) VALUES (?)";
 
-            // Preparamos o comando avisando que queremos saber qual ID foi gerado
-            PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert, Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement pstmtInsert = conn.prepareStatement(sqlInsert);
+            pstmtInsert.setInt(1, idFixo);
 
             // Executa a inserção
             pstmtInsert.executeUpdate();
 
-            // ================================
-            // 3. MOSTRANDO O ID GERADO
-            // ================================
-            ResultSet rs = pstmtInsert.getGeneratedKeys();
-            if (rs.next()) {
-                int idGerado = rs.getInt(1);
-                System.out.println("Cinema incluído com sucesso! O banco gerou o ID: " + idGerado);
-            }
+            ResultSet rs = null;
 
-            int opcao = -1;
+            int opcaoPrincipal = -1;
 
             // ================================
-            // 2. MENU
+            // MENU PRINCIPAL
             // ================================
-            while (opcao != 0) {
+            while (opcaoPrincipal != 0) {
                 System.out.println("\n==================================");
-                System.out.println("====== SISTEMA DE INGRESSOS ======");
+                System.out.println("=======   MENU PRINCIPAL   =======");
                 System.out.println("==================================");
-                System.out.println("1 - Cadastrar novo ingresso");
-                System.out.println("2 - Listar todos os ingressos");
-                System.out.println("3 - Atualizar um ingresso");
-                System.out.println("4 - Excluir um ingresso");
+                System.out.println("1 - Gerenciar Salas");
+                System.out.println("2 - Gerenciar Filmes");
+                System.out.println("3 - Gerenciar Sessões");
+                System.out.println("4 - Gerenciar Ingressos");
                 System.out.println("0 - Sair do sistema");
                 System.out.print("Escolha uma opção: ");
 
-                opcao = scanner.nextInt();
-                scanner.nextLine(); // Limpa o buffer do teclado
+                opcaoPrincipal = scanner.nextInt();
+                scanner.nextLine();
 
-                switch (opcao) {
-                    case 1:
-                        // ===================== CREATE =======================
-                        System.out.println("\n--- CADASTRAR INGRESSO ---");
-                        System.out.print("Digite o número do assento (Obs: de 1 a 50): ");
-                        String assento = scanner.nextLine();
-                        System.out.print("Digite o status (disponível ou vendido): ");
-                        String status = scanner.nextLine();
-                        System.out.print("Digite o ID da Sessão (Ex: 1, 2, 3...): ");
-                        int idSessao = scanner.nextInt();
+                switch (opcaoPrincipal) {
 
-                        String sqlInsertIngresso = "INSERT INTO ingressos (numero_assento, status, id_sessao) VALUES (?, ?, ?)";
-                        PreparedStatement pstmtInsertIngresso = conn.prepareStatement(sqlInsertIngresso);
-                        pstmtInsertIngresso.setString(1, assento);
-                        pstmtInsertIngresso.setString(2, status);
-                        pstmtInsertIngresso.setInt(3, idSessao);
+                    // ==========================================
+                    case 1: // MENU DE SALAS
+                    // ==========================================
+                    {
+                        int opcaoSala = -1;
+                        while (opcaoSala != 0) {
+                            System.out.println("\n--- MENU: SALAS ---");
+                            System.out.println("1 - Cadastrar sala");
+                            System.out.println("2 - Listar salas");
+                            System.out.println("3 - Atualizar sala");
+                            System.out.println("4 - Excluir sala");
+                            System.out.println("0 - Voltar");
+                            System.out.print("Escolha: ");
+                            opcaoSala = scanner.nextInt();
+                            scanner.nextLine();
 
-                        pstmtInsertIngresso.executeUpdate();
-                        System.out.println("✅ Ingresso cadastrado com sucesso!");
-                        break;
+                            switch (opcaoSala) {
+                                case 1: // CADASTRAR
+                                    System.out.print("Número da sala: ");
+                                    int numSala = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Capacidade: ");
+                                    int capacidade = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Tipo (2D, 3D, VIP): ");
+                                    String tipoSala = scanner.nextLine().toUpperCase();
+                                    System.out.print("ID do cinema: ");
+                                    int idCinemaSala = scanner.nextInt();
+                                    scanner.nextLine();
 
-                    case 2:
-                        // ====================== READ =========================
-                        System.out.println("\n--- LISTA DE INGRESSOS ---");
-                        String sqlSelect = "SELECT * FROM ingressos";
-                        PreparedStatement pstmtSelect = conn.prepareStatement(sqlSelect);
-                        rs = pstmtSelect.executeQuery();
+                                    PreparedStatement psInsertSala = conn.prepareStatement(
+                                            "INSERT INTO salas (numero_sala, capacidade, tipo, id_cinema) VALUES (?, ?, ?, ?)");
+                                    psInsertSala.setInt(1, numSala);
+                                    psInsertSala.setInt(2, capacidade);
+                                    psInsertSala.setString(3, tipoSala);
+                                    psInsertSala.setInt(4, idCinemaSala);
+                                    psInsertSala.executeUpdate();
+                                    System.out.println("✅ Sala cadastrada com sucesso!");
+                                    break;
 
-                        boolean temIngressos = false;
-                        while (rs.next()) {
-                            temIngressos = true;
-                            System.out.println("ID: " + rs.getInt("id_ingresso") +
-                                    " | Assento: " + rs.getString("numero_assento") +
-                                    " | Status: " + rs.getString("status") +
-                                    " | ID Sessão: " + rs.getInt("id_sessao"));
-                        }
+                                case 2: // LISTAR
+                                    rs = conn.prepareStatement("SELECT * FROM salas").executeQuery();
+                                    boolean temSala = false;
+                                    while (rs.next()) {
+                                        temSala = true;
+                                        System.out.println("ID: " + rs.getInt("id_sala")
+                                                + " | Nº Sala: " + rs.getInt("numero_sala")
+                                                + " | Capacidade: " + rs.getInt("capacidade")
+                                                + " | Tipo: " + rs.getString("tipo")
+                                                + " | ID Cinema: " + rs.getInt("id_cinema"));
+                                    }
+                                    if (!temSala)
+                                        System.out.println("Nenhuma sala cadastrada.");
+                                    break;
 
-                        if (!temIngressos) {
-                            System.out.println("Nenhum ingresso cadastrado no momento.");
-                        }
-                        break;
+                                case 3: // ATUALIZAR
+                                    System.out.print("ID da sala a atualizar: ");
+                                    int idSalaUp = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Novo número da sala: ");
+                                    int novoNumSala = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Nova capacidade: ");
+                                    int novaCapacidade = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Novo tipo (2D, 3D, VIP): ");
+                                    String novoTipoSala = scanner.nextLine().toUpperCase();
+                                    System.out.print("Novo ID do cinema: ");
+                                    int novoIdCinemaSala = scanner.nextInt();
+                                    scanner.nextLine();
 
-                    case 3:
-                        // ===================== UPDATE ========================
-                        System.out.println("\n--- ATUALIZAR INGRESSO ---");
-                        System.out.print("Digite o ID do ingresso que deseja alterar: ");
-                        int idAtualizar = scanner.nextInt();
-                        scanner.nextLine(); // Limpa o buffer
+                                    PreparedStatement psUpdateSala = conn.prepareStatement(
+                                            "UPDATE salas SET numero_sala = ?, capacidade = ?, tipo = ?, id_cinema = ? WHERE id_sala = ?");
+                                    psUpdateSala.setInt(1, novoNumSala);
+                                    psUpdateSala.setInt(2, novaCapacidade);
+                                    psUpdateSala.setString(3, novoTipoSala);
+                                    psUpdateSala.setInt(4, novoIdCinemaSala);
+                                    psUpdateSala.setInt(5, idSalaUp);
+                                    int linhasSala = psUpdateSala.executeUpdate();
+                                    System.out.println(linhasSala > 0 ? "✅ Sala atualizada!" : "❌ ID não encontrado.");
+                                    break;
 
-                        System.out.print("Digite o NOVO número do assento: ");
-                        String novoAssento = scanner.nextLine();
-                        System.out.print("Digite o NOVO status (disponível ou vendido): ");
-                        String novoStatus = scanner.nextLine();
-                        System.out.print("Digite o NOVO ID da Sessão: ");
-                        int novaSessao = scanner.nextInt();
+                                case 4: // DELETAR
+                                    System.out.print("ID da sala a excluir: ");
+                                    int idSalaDel = scanner.nextInt();
+                                    scanner.nextLine();
 
-                        String sqlUpdate = "UPDATE ingressos SET numero_assento = ?, status = ?, id_sessao = ? WHERE id_ingresso = ?";
-                        PreparedStatement pstmtUpdate = conn.prepareStatement(sqlUpdate);
-                        pstmtUpdate.setString(1, novoAssento);
-                        pstmtUpdate.setString(2, novoStatus);
-                        pstmtUpdate.setInt(3, novaSessao);
-                        pstmtUpdate.setInt(4, idAtualizar);
+                                    PreparedStatement psDeleteSala = conn.prepareStatement(
+                                            "DELETE FROM salas WHERE id_sala = ?");
+                                    psDeleteSala.setInt(1, idSalaDel);
+                                    int delSala = psDeleteSala.executeUpdate();
+                                    System.out.println(delSala > 0 ? "✅ Sala excluída!" : "❌ ID não encontrado.");
+                                    break;
 
-                        int linhasAfetadas = pstmtUpdate.executeUpdate();
-                        if (linhasAfetadas > 0) {
-                            System.out.println("✅ Ingresso atualizado com sucesso!");
-                        } else {
-                            System.out.println("❌ Ingresso não encontrado (ID inválido).");
-                        }
-                        break;
+                                case 0: // VOLTAR
+                                    System.out.println("Voltando ao menu principal...");
+                                    break;
 
-                    case 4:
-                        // ===================== DELETE ========================
-                        System.out.println("\n--- EXCLUIR INGRESSO ---");
-                        System.out.print("Digite o ID do ingresso que deseja excluir: ");
-                        int idExcluir = scanner.nextInt();
-
-                        String sqlDelete = "DELETE FROM ingressos WHERE id_ingresso = ?";
-                        PreparedStatement pstmtDelete = conn.prepareStatement(sqlDelete);
-                        pstmtDelete.setInt(1, idExcluir);
-
-                        int linhasDeletadas = pstmtDelete.executeUpdate();
-                        if (linhasDeletadas > 0) {
-                            System.out.println("✅ Ingresso deletado com sucesso!");
-                        } else {
-                            System.out.println("❌ Ingresso não encontrado (ID inválido).");
-                        }
-                        break;
-                    
-                        
-                    //SESSÕES
-                    case 5:
-                        // ===================== CREATE =======================
-                        System.out.println("\n--- CADASTRAR SESSÃO ---");
-
-                        System.out.print("Digite a data da sessao: ");
-                        String dataSessao = scanner.nextLine();
-
-                        System.out.print("Digite o horário: ");
-                        String horarioSessao = scanner.nextLine();
-
-                        System.out.print("Digite o valor do ingresso: ");
-                        double valorSessao = scanner.nextDouble();
-
-                        System.out.print("Digite o ID do filme: ");
-                        int filmeSessao = scanner.nextInt();
-
-                        System.out.print("Digite o ID da sala: ");
-                        int salaSessao = scanner.nextInt();
-
-                        String sqlInsertSessao = "INSERT INTO sessoes (data, horario, valor_ingresso, id_filme, id_sala) VALUES (?, ?, ?, ?, ?)";
-                        PreparedStatement pstmtInsertSessao = conn.prepareStatement(sqlInsertSessao);
-
-                        pstmtInsertSessao.setDate(1, Date.valueOf(dataSessao));
-                        pstmtInsertSessao.setTime(2, Time.valueOf(horarioSessao));
-                        pstmtInsertSessao.setDouble(3, valorSessao);
-                        pstmtInsertSessao.setInt(4, filmeSessao);
-                        pstmtInsertSessao.setInt(5, salaSessao);
-
-                        pstmtInsertSessao.executeUpdate();
-                        System.out.println("Sessão cadastrada com sucesso!");
-                        break;
-
-                    case 6:
-                        // ====================== READ =========================
-                        System.out.println("\n--- LISTA DE SESSÕES ---");
-
-                        String sqlSelectSessao = "SELECT * FROM sessoes";
-                        PreparedStatement pstmtSelectSessao = conn.prepareStatement(sqlSelectSessao);
-                        ResultSet rsSessao = pstmtSelectSessao.executeQuery();
-
-                        boolean temSessao = false;
-
-                        while (rsSessao.next()) {
-                            temSessao = true;
-                            System.out.println("ID: " + rsSessao.getInt("id_sessao") +
-                                    " | Data: " + rsSessao.getDate("data") +
-                                    " | Horário: " + rsSessao.getTime("horario") +
-                                    " | Valor: " + rsSessao.getDouble("valor_ingresso") +
-                                    " | ID Filme: " + rsSessao.getInt("id_filme") +
-                                    " | ID Sala: " + rsSessao.getInt("id_sala"));
-                        }
-
-                        if (!temSessao) {
-                            System.out.println("Nenhuma sessão cadastrada.");
+                                default: // OPÇÃO INVÁLIDA
+                                    System.out.println("❌ Opção inválida!");
+                            }
                         }
                         break;
+                    }
 
-                    case 7:
-                        // ===================== UPDATE ========================
-                        System.out.println("\n--- ATUALIZAR SESSÃO ---");
+                    // ==========================================
+                    case 2: // MENU DE FILMES
+                    // ==========================================
+                    {
+                        int opcaoFilme = -1;
+                        while (opcaoFilme != 0) {
+                            System.out.println("\n--- MENU: FILMES ---");
+                            System.out.println("1 - Cadastrar filme");
+                            System.out.println("2 - Listar filmes");
+                            System.out.println("3 - Atualizar filme");
+                            System.out.println("4 - Excluir filme");
+                            System.out.println("0 - Voltar");
+                            System.out.print("Escolha: ");
+                            opcaoFilme = scanner.nextInt();
+                            scanner.nextLine();
 
-                        System.out.print("Digite o ID da sessão que deseja alterar: ");
-                        int idAtualizarSessao = scanner.nextInt();
-                        scanner.nextLine();
+                            switch (opcaoFilme) {
+                                case 1: // CADASTRAR
+                                    System.out.print("Título do filme: ");
+                                    String titulo = scanner.nextLine();
+                                    System.out.print("Gênero: ");
+                                    String genero = scanner.nextLine();
+                                    System.out.print("Classificação (Ex: Livre, 10, 12, 14, 16, 18): ");
+                                    String classificacao = scanner.nextLine();
+                                    System.out.print("Duração (minutos): ");
+                                    int duracao = scanner.nextInt();
+                                    scanner.nextLine();
 
-                        System.out.print("Digite a NOVA data: ");
-                        String novaDataSessao = scanner.nextLine();
+                                    PreparedStatement psInsertFilme = conn.prepareStatement(
+                                            "INSERT INTO filmes (titulo, genero, classificacao, duracao_minutos) VALUES (?, ?, ?, ?)");
+                                    psInsertFilme.setString(1, titulo);
+                                    psInsertFilme.setString(2, genero);
+                                    psInsertFilme.setString(3, classificacao);
+                                    psInsertFilme.setInt(4, duracao);
+                                    psInsertFilme.executeUpdate();
+                                    System.out.println("✅ Filme cadastrado com sucesso!");
+                                    break;
 
-                        System.out.print("Digite o NOVO horário: ");
-                        String novoHorarioSessao = scanner.nextLine();
+                                case 2: // LISTAR
+                                    rs = conn.prepareStatement("SELECT * FROM filmes").executeQuery();
+                                    boolean temFilme = false;
+                                    while (rs.next()) {
+                                        temFilme = true;
+                                        System.out.println("ID: " + rs.getInt("id_filme")
+                                                + " | Título: " + rs.getString("titulo")
+                                                + " | Gênero: " + rs.getString("genero")
+                                                + " | Classificação: " + rs.getString("classificacao")
+                                                + " | Duração: " + rs.getInt("duracao_minutos") + " min");
+                                    }
+                                    if (!temFilme)
+                                        System.out.println("Nenhum filme cadastrado.");
+                                    break;
 
-                        System.out.print("Digite o NOVO valor do ingresso: ");
-                        double novoValorSessao = scanner.nextDouble();
+                                case 3: // ATUALIZAR
+                                    System.out.print("ID do filme a atualizar: ");
+                                    int idFilmeUp = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Novo título: ");
+                                    String novoTitulo = scanner.nextLine();
+                                    System.out.print("Novo gênero: ");
+                                    String novoGenero = scanner.nextLine();
+                                    System.out.print("Nova classificação: ");
+                                    String novaClassificacao = scanner.nextLine();
+                                    System.out.print("Nova duração (min): ");
+                                    int novaDuracao = scanner.nextInt();
+                                    scanner.nextLine();
 
-                        System.out.print("Digite o NOVO ID do filme: ");
-                        int novoFilmeSessao = scanner.nextInt();
+                                    PreparedStatement psUpdateFilme = conn.prepareStatement(
+                                            "UPDATE filmes SET titulo = ?, genero = ?, classificacao = ?, duracao_minutos = ? WHERE id_filme = ?");
+                                    psUpdateFilme.setString(1, novoTitulo);
+                                    psUpdateFilme.setString(2, novoGenero);
+                                    psUpdateFilme.setString(3, novaClassificacao);
+                                    psUpdateFilme.setInt(4, novaDuracao);
+                                    psUpdateFilme.setInt(5, idFilmeUp);
+                                    int linhasFilme = psUpdateFilme.executeUpdate();
+                                    System.out
+                                            .println(linhasFilme > 0 ? "✅ Filme atualizado!" : "❌ ID não encontrado.");
+                                    break;
 
-                        System.out.print("Digite o NOVO ID da sala: ");
-                        int novaSalaSessao = scanner.nextInt();
+                                case 4: // DELETAR
+                                    System.out.print("ID do filme a excluir: ");
+                                    int idFilmeDel = scanner.nextInt();
+                                    scanner.nextLine();
 
-                        String sqlUpdateSessao = "UPDATE sessoes SET data = ?, horario = ?, valor_ingresso = ?, id_filme = ?, id_sala = ? WHERE id_sessao = ?";
-                        PreparedStatement pstmtUpdateSessao = conn.prepareStatement(sqlUpdateSessao);
+                                    PreparedStatement psDeleteFilme = conn.prepareStatement(
+                                            "DELETE FROM filmes WHERE id_filme = ?");
+                                    psDeleteFilme.setInt(1, idFilmeDel);
+                                    int delFilme = psDeleteFilme.executeUpdate();
+                                    System.out.println(delFilme > 0 ? "✅ Filme excluído!" : "❌ ID não encontrado.");
+                                    break;
 
-                        pstmtUpdateSessao.setDate(1, Date.valueOf(novaDataSessao));
-                        pstmtUpdateSessao.setTime(2, Time.valueOf(novoHorarioSessao));
-                        pstmtUpdateSessao.setDouble(3, novoValorSessao);
-                        pstmtUpdateSessao.setInt(4, novoFilmeSessao);
-                        pstmtUpdateSessao.setInt(5, novaSalaSessao);
-                        pstmtUpdateSessao.setInt(6, idAtualizarSessao);
+                                case 0: // VOLTAR
+                                    System.out.println("Voltando ao menu principal...");
+                                    break;
 
-                        int linhasSessao = pstmtUpdateSessao.executeUpdate();
-
-                        if (linhasSessao > 0) {
-                            System.out.println("Sessão atualizada com sucesso!");
-                        } else {
-                            System.out.println(" Sessão não encontrada (ID inválido).");
+                                default: // OPÇÃO INVÁLIDA
+                                    System.out.println("❌ Opção inválida!");
+                            }
                         }
                         break;
+                    }
 
-                    case 8:
-                                              // DELETE
-                        System.out.println("\n EXCLUIR SESSÃO ");
+                    // ==========================================
+                    case 3: // MENU DE SESSÕES
+                    // ==========================================
+                    {
+                        int opcaoSessao = -1;
+                        while (opcaoSessao != 0) {
+                            System.out.println("\n--- MENU: SESSÕES ---");
+                            System.out.println("1 - Cadastrar sessão");
+                            System.out.println("2 - Listar sessões");
+                            System.out.println("3 - Atualizar sessão");
+                            System.out.println("4 - Excluir sessão");
+                            System.out.println("0 - Voltar");
+                            System.out.print("Escolha: ");
+                            opcaoSessao = scanner.nextInt();
+                            scanner.nextLine();
 
-                        System.out.print("Digite o ID da sessão que deseja excluir: ");
-                        int idExcluirSessao = scanner.nextInt();
+                            switch (opcaoSessao) {
+                                case 1: // CADASTRAR
+                                    System.out.print("Data da sessão (DD/MM/AAAA): ");
+                                    String dataSessao = scanner.nextLine().trim();
+                                    // Converte DD/MM/AAAA para AAAA-MM-DD se necessário
+                                    if (dataSessao.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                                        String[] partes = dataSessao.split("/");
+                                        dataSessao = partes[2] + "-" + partes[1] + "-" + partes[0];
+                                    }
+                                    System.out.print("Horário (HH:MM): ");
+                                    String horarioSessao = scanner.nextLine().trim();
+                                    // Adiciona segundos se necessário (HH:MM → HH:MM:SS)
+                                    if (horarioSessao.matches("\\d{2}:\\d{2}")) {
+                                        horarioSessao = horarioSessao + ":00";
+                                    }
+                                    System.out.print("Valor do ingresso: ");
+                                    double valorSessao = scanner.nextDouble();
+                                    System.out.print("ID do filme: ");
+                                    int filmeSessao = scanner.nextInt();
+                                    System.out.print("ID da sala: ");
+                                    int salaSessao = scanner.nextInt();
+                                    scanner.nextLine();
 
-                        String sqlDeleteSessao = "DELETE FROM sessoes WHERE id_sessao = ?";
-                        PreparedStatement pstmtDeleteSessao = conn.prepareStatement(sqlDeleteSessao);
-                        pstmtDeleteSessao.setInt(1, idExcluirSessao);
+                                    PreparedStatement psInsertSessao = conn.prepareStatement(
+                                            "INSERT INTO sessoes (data_sessao, horario, valor_ingresso, id_filme, id_sala) VALUES (?, ?, ?, ?, ?)",
+                                            Statement.RETURN_GENERATED_KEYS);
+                                    psInsertSessao.setDate(1, Date.valueOf(dataSessao));
+                                    psInsertSessao.setTime(2, Time.valueOf(horarioSessao));
+                                    psInsertSessao.setDouble(3, valorSessao);
+                                    psInsertSessao.setInt(4, filmeSessao);
+                                    psInsertSessao.setInt(5, salaSessao);
+                                    psInsertSessao.executeUpdate();
 
-                        int linhasDeletadasSessao = pstmtDeleteSessao.executeUpdate();
+                                    // Pega o ID da sessão gerado automaticamente
+                                    ResultSet rsIdSessao = psInsertSessao.getGeneratedKeys();
+                                    if (rsIdSessao.next()) {
+                                        int novoIdSessao = rsIdSessao.getInt(1);
 
-                        if (linhasDeletadasSessao > 0) {
-                            System.out.println("Sessão deletada com sucesso!");
-                        } else {
-                            System.out.println("Sessão não encontrada (ID inválido).");
+                                        // Gera automaticamente 70 ingressos disponíveis para essa sessão
+                                        PreparedStatement psGeraIngressos = conn.prepareStatement(
+                                                "INSERT INTO ingressos (numero_assento, status, id_sessao) VALUES (?, 'disponivel', ?)");
+                                        for (int assNum = 1; assNum <= 70; assNum++) {
+                                            psGeraIngressos.setString(1, String.valueOf(assNum));
+                                            psGeraIngressos.setInt(2, novoIdSessao);
+                                            psGeraIngressos.addBatch();
+                                        }
+                                        psGeraIngressos.executeBatch();
+                                        System.out.println("✅ Sessão cadastrada com sucesso! ID: " + novoIdSessao);
+                                        System.out.println("   70 ingressos (assentos 1-70) gerados automaticamente.");
+                                    }
+                                    break;
+
+                                case 2: // LISTAR
+                                    rs = conn.prepareStatement("SELECT * FROM sessoes").executeQuery();
+                                    boolean temSessao = false;
+                                    while (rs.next()) {
+                                        temSessao = true;
+                                        System.out.println("ID: " + rs.getInt("id_sessao")
+                                                + " | Data: " + rs.getDate("data_sessao")
+                                                + " | Horário: " + rs.getTime("horario")
+                                                + " | Valor: R$" + rs.getDouble("valor_ingresso")
+                                                + " | ID Filme: " + rs.getInt("id_filme")
+                                                + " | ID Sala: " + rs.getInt("id_sala"));
+                                    }
+                                    if (!temSessao)
+                                        System.out.println("Nenhuma sessão cadastrada.");
+                                    break;
+
+                                case 3: // ATUALIZAR
+                                    System.out.print("ID da sessão a atualizar: ");
+                                    int idSessaoUp = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Nova data (DD/MM/AAAA): ");
+                                    String novaData = scanner.nextLine().trim();
+                                    if (novaData.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                                        String[] partesUp = novaData.split("/");
+                                        novaData = partesUp[2] + "-" + partesUp[1] + "-" + partesUp[0];
+                                    }
+                                    System.out.print("Novo horário (HH:MM): ");
+                                    String novoHorario = scanner.nextLine().trim();
+                                    if (novoHorario.matches("\\d{2}:\\d{2}")) {
+                                        novoHorario = novoHorario + ":00";
+                                    }
+                                    System.out.print("Novo valor do ingresso: ");
+                                    double novoValor = scanner.nextDouble();
+                                    System.out.print("Novo ID do filme: ");
+                                    int novoFilme = scanner.nextInt();
+                                    System.out.print("Novo ID da sala: ");
+                                    int novaSala = scanner.nextInt();
+                                    scanner.nextLine();
+
+                                    PreparedStatement psUpdateSessao = conn.prepareStatement(
+                                            "UPDATE sessoes SET data_sessao = ?, horario = ?, valor_ingresso = ?, id_filme = ?, id_sala = ? WHERE id_sessao = ?");
+                                    psUpdateSessao.setDate(1, Date.valueOf(novaData));
+                                    psUpdateSessao.setTime(2, Time.valueOf(novoHorario));
+                                    psUpdateSessao.setDouble(3, novoValor);
+                                    psUpdateSessao.setInt(4, novoFilme);
+                                    psUpdateSessao.setInt(5, novaSala);
+                                    psUpdateSessao.setInt(6, idSessaoUp);
+                                    int linhasSessao = psUpdateSessao.executeUpdate();
+                                    System.out.println(
+                                            linhasSessao > 0 ? "✅ Sessão atualizada!" : "❌ ID não encontrado.");
+                                    break;
+
+                                case 4: // DELETAR
+                                    System.out.print("ID da sessão a excluir: ");
+                                    int idSessaoDel = scanner.nextInt();
+                                    scanner.nextLine();
+
+                                    // Deleta primeiro os ingressos da sessão
+                                    PreparedStatement psDeleteIngressosSessao = conn.prepareStatement(
+                                            "DELETE FROM ingressos WHERE id_sessao = ?");
+                                    psDeleteIngressosSessao.setInt(1, idSessaoDel);
+                                    psDeleteIngressosSessao.executeUpdate();
+
+                                    // Depois deleta a sessão
+                                    PreparedStatement psDeleteSessao = conn.prepareStatement(
+                                            "DELETE FROM sessoes WHERE id_sessao = ?");
+                                    psDeleteSessao.setInt(1, idSessaoDel);
+                                    int delSessao = psDeleteSessao.executeUpdate();
+                                    System.out.println(delSessao > 0 ? "✅ Sessão e seus ingressos excluídos!"
+                                            : "❌ ID não encontrado.");
+                                    break;
+
+                                case 0: // VOLTAR
+                                    System.out.println("Voltando ao menu principal...");
+                                    break;
+
+                                default: // OPÇÃO INVÁLIDA
+                                    System.out.println("❌ Opção inválida!");
+                            }
                         }
                         break;
+                    }
+
+                    // ==========================================
+                    case 4: // MENU DE VENDA DE INGRESSOS
+                    // ==========================================
+                    {
+                        int opcaoIngresso = -1;
+                        while (opcaoIngresso != 0) {
+                            System.out.println("\n--- MENU: VENDA DE INGRESSOS ---");
+                            System.out.println("1 - Ver ingressos disponíveis por sessão");
+                            System.out.println("2 - Vender ingresso");
+                            System.out.println("3 - Cancelar venda (devolver ingresso)");
+                            System.out.println("0 - Voltar");
+                            System.out.print("Escolha: ");
+                            opcaoIngresso = scanner.nextInt();
+                            scanner.nextLine();
+
+                            switch (opcaoIngresso) {
+                                case 1: // LISTAR DISPONÍVEIS
+                                    System.out.print("Digite o ID da sessão: ");
+                                    int idSessaoVer = scanner.nextInt();
+                                    scanner.nextLine();
+
+                                    PreparedStatement psDisponiveis = conn.prepareStatement(
+                                            "SELECT * FROM ingressos WHERE id_sessao = ? AND status = 'disponivel' ORDER BY CAST(numero_assento AS UNSIGNED)");
+                                    psDisponiveis.setInt(1, idSessaoVer);
+                                    ResultSet rsDisp = psDisponiveis.executeQuery();
+
+                                    boolean temDisponivel = false;
+                                    int contDisp = 0;
+                                    System.out.println("\n=== INGRESSOS DISPONIVEIS - Sessao " + idSessaoVer + " ===");
+                                    System.out.println("------------------------------------------");
+                                    while (rsDisp.next()) {
+                                        temDisponivel = true;
+                                        System.out.printf("%-6s", rsDisp.getString("numero_assento"));
+                                        contDisp++;
+                                        if (contDisp % 10 == 0) {
+                                            System.out.println();
+                                        }
+                                    }
+                                    if (contDisp % 10 != 0)
+                                        System.out.println();
+                                    System.out.println("------------------------------------------");
+                                    if (!temDisponivel)
+                                        System.out.println("Nenhum ingresso disponivel para esta sessao.");
+                                    break;
+
+                                case 2: // VENDER
+                                    System.out.print("ID da sessão: ");
+                                    int idSessaoVenda = scanner.nextInt();
+                                    scanner.nextLine();
+
+                                    // Mostra disponíveis antes de vender
+                                    PreparedStatement psListaVenda = conn.prepareStatement(
+                                            "SELECT * FROM ingressos WHERE id_sessao = ? AND status = 'disponivel' ORDER BY CAST(numero_assento AS UNSIGNED)");
+                                    psListaVenda.setInt(1, idSessaoVenda);
+                                    ResultSet rsVenda = psListaVenda.executeQuery();
+
+                                    System.out.println("\nAssentos disponiveis:");
+                                    System.out.println("------------------------------------------");
+                                    boolean algumDisp = false;
+                                    int contAssentos = 0;
+                                    while (rsVenda.next()) {
+                                        algumDisp = true;
+                                        System.out.printf("%-6s", rsVenda.getString("numero_assento"));
+                                        contAssentos++;
+                                        if (contAssentos % 10 == 0) {
+                                            System.out.println();
+                                        }
+                                    }
+                                    if (contAssentos % 10 != 0)
+                                        System.out.println();
+                                    System.out.println("------------------------------------------");
+
+                                    if (!algumDisp) {
+                                        System.out.println("Nenhum ingresso disponivel para esta sessao.");
+                                        break;
+                                    }
+
+                                    System.out.print("Numero do assento que deseja comprar: ");
+                                    String assentoEscolhido = scanner.nextLine();
+
+                                    PreparedStatement psVender = conn.prepareStatement(
+                                            "UPDATE ingressos SET status = 'vendido' WHERE id_sessao = ? AND numero_assento = ? AND status = 'disponivel'");
+                                    psVender.setInt(1, idSessaoVenda);
+                                    psVender.setString(2, assentoEscolhido);
+                                    int vendido = psVender.executeUpdate();
+
+                                    if (vendido > 0) {
+                                        System.out.println(
+                                                "✅ Ingresso do assento " + assentoEscolhido + " vendido com sucesso!");
+                                    } else {
+                                        System.out.println("❌ Assento inválido ou já vendido.");
+                                    }
+                                    break;
+
+                                case 3: // CANCELAR VENDA
+                                    System.out.print("ID da sessão: ");
+                                    int idSessaoCancelar = scanner.nextInt();
+                                    scanner.nextLine();
+                                    System.out.print("Número do assento a devolver: ");
+                                    String assentoCancelar = scanner.nextLine();
+
+                                    PreparedStatement psCancelar = conn.prepareStatement(
+                                            "UPDATE ingressos SET status = 'disponivel' WHERE id_sessao = ? AND numero_assento = ? AND status = 'vendido'");
+                                    psCancelar.setInt(1, idSessaoCancelar);
+                                    psCancelar.setString(2, assentoCancelar);
+                                    int cancelado = psCancelar.executeUpdate();
+
+                                    if (cancelado > 0) {
+                                        System.out.println("✅ Venda do assento " + assentoCancelar
+                                                + " cancelada. Ingresso devolvido.");
+                                    } else {
+                                        System.out.println("❌ Assento inválido ou já disponível.");
+                                    }
+                                    break;
+
+                                case 0:
+                                    System.out.println("Voltando ao menu principal...");
+                                    break;
+
+                                default:
+                                    System.out.println("❌ Opção inválida!");
+                            }
+                        }
+                        break;
+                    }
 
                     case 0:
                         System.out.println("\nEncerrando o sistema... Até logo!");
@@ -290,9 +561,6 @@ public class cinema {
             e.printStackTrace();
 
         } finally {
-            // ================================
-            // 3. FECHANDO A CONEXÃO
-            // ================================
             try {
                 if (scanner != null) {
                     scanner.close();

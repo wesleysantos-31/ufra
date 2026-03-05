@@ -12,16 +12,17 @@ const state = {
     rotationVelocity: { x: 0, y: 0 },
     autoRotate: true,
     isHandClosed: false,
-    handPos: { x: 0, y: 0 }, // Normalizado -1 a 1
+    isPointing: false,       // Novo: dedo indicador apontando
+    pointerPos: { x: 0, y: 0, z: 0 }, // Posição 3D da ponta do indicador
+    handPos: { x: 0, y: 0 },
     prevHandPos: { x: 0, y: 0 },
-    explosionFactor: 0, // 0 = unido, 1 = explodido
+    explosionFactor: 0,      // 0 = unido, 1 = explodido
     color: new THREE.Color('#00f2ff')
 };
 
 // --- THREE.JS SETUP ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-// Leve neblina para profundidade
 scene.fog = new THREE.FogExp2(0x050505, 0.02);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -36,17 +37,23 @@ container.appendChild(renderer.domElement);
 const geometry = new THREE.BufferGeometry();
 const positions = new Float32Array(PARTICLE_COUNT * 3);
 const targetPositions = new Float32Array(PARTICLE_COUNT * 3);
-const randomPositions = new Float32Array(PARTICLE_COUNT * 3); // Para explosão
+const randomPositions = new Float32Array(PARTICLE_COUNT * 3);
 
-// Inicializar posições aleatórias
 for (let i = 0; i < PARTICLE_COUNT * 3; i++) {
     positions[i] = (Math.random() - 0.5) * 100;
     randomPositions[i] = (Math.random() - 0.5) * EXPLOSION_RANGE * 2;
 }
 
+// Sistema de pó mágico: cada partícula tem sua própria velocidade (inércia)
+const particleVelocities = new Float32Array(PARTICLE_COUNT * 3); // vx, vy, vz por partícula
+// Fase única por partícula (para a ondulação senoidal individual)
+const particlePhase = new Float32Array(PARTICLE_COUNT);
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particlePhase[i] = Math.random() * Math.PI * 2;
+}
+
 geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-// Textura suave para partículas
 const sprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
 
 const material = new THREE.PointsMaterial({
@@ -66,15 +73,12 @@ scene.add(particles);
 // --- GERADORES DE FORMAS ---
 
 function setTargetShape(type) {
-    // Atualiza botões
     document.querySelectorAll('.shape-grid button').forEach(b => b.classList.remove('active'));
     const btn = document.getElementById('btn-' + type) || document.getElementById('btn-text');
-    if(btn) btn.classList.add('active');
+    if (btn) btn.classList.add('active');
 
     let idx = 0;
-    const tempVec = new THREE.Vector3();
 
-    // Lógica de geração de formas
     if (type === 'sphere') {
         const radius = 6;
         for (let i = 0; i < PARTICLE_COUNT; i++) {
@@ -85,26 +89,19 @@ function setTargetShape(type) {
             targetPositions[idx++] = radius * Math.cos(phi);
         }
     } else if (type === 'cube') {
-            const size = 8;
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const size = 8;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
             targetPositions[idx++] = (Math.random() - 0.5) * size;
             targetPositions[idx++] = (Math.random() - 0.5) * size;
             targetPositions[idx++] = (Math.random() - 0.5) * size;
-            }
+        }
     } else if (type === 'heart') {
-        // Fórmulas paramétricas para coração 3D
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             const t = Math.random() * Math.PI * 2;
-            const u = Math.random() * Math.PI; // Distribuição não uniforme mas visualmente ok
-            
-            // Escala base
             const s = 0.35;
-            
-            // Variação de uma fórmula comum de coração
             const x = 16 * Math.pow(Math.sin(t), 3);
-            const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-            const z = (Math.random() - 0.5) * 6; // Espessura
-
+            const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+            const z = (Math.random() - 0.5) * 6;
             targetPositions[idx++] = x * s;
             targetPositions[idx++] = y * s;
             targetPositions[idx++] = z;
@@ -113,10 +110,8 @@ function setTargetShape(type) {
         const planetRadius = 4;
         const ringInner = 5.5;
         const ringOuter = 9;
-        
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             if (i < PARTICLE_COUNT * 0.4) {
-                // Planeta
                 const u = Math.random();
                 const v = Math.random();
                 const theta = 2 * Math.PI * u;
@@ -125,46 +120,41 @@ function setTargetShape(type) {
                 targetPositions[idx++] = planetRadius * Math.sin(phi) * Math.sin(theta);
                 targetPositions[idx++] = planetRadius * Math.cos(phi);
             } else {
-                // Anéis
                 const angle = Math.random() * Math.PI * 2;
                 const dist = ringInner + Math.random() * (ringOuter - ringInner);
                 targetPositions[idx++] = Math.cos(angle) * dist;
-                targetPositions[idx++] = (Math.random() - 0.5) * 0.2; // Espessura fina
+                targetPositions[idx++] = (Math.random() - 0.5) * 0.2;
                 targetPositions[idx++] = Math.sin(angle) * dist;
             }
         }
     } else if (type === 'flower') {
-            for (let i = 0; i < PARTICLE_COUNT; i++) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
             const u = Math.random() * Math.PI * 2;
-            const v = Math.random() * Math.PI; 
-            const r = 5 + Math.cos(5 * u) * Math.sin(v) * 3; // Pétalas
-            
+            const v = Math.random() * Math.PI;
+            const r = 5 + Math.cos(5 * u) * Math.sin(v) * 3;
             targetPositions[idx++] = r * Math.sin(v) * Math.cos(u);
             targetPositions[idx++] = r * Math.sin(v) * Math.sin(u);
             targetPositions[idx++] = r * Math.cos(v);
-            }
+        }
     } else if (type === 'buddha') {
-        // Abstração de uma figura meditando (Cabeça + Torso + Pernas)
-        // Usando composição de esferas e ovais
-        for(let i=0; i<PARTICLE_COUNT; i++) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
             const r = Math.random();
             let px, py, pz;
-            
-            if(r < 0.20) { // Cabeça
+            if (r < 0.20) {
                 const u = Math.random() * Math.PI * 2;
                 const v = Math.random() * Math.PI;
                 const rad = 1.8;
                 px = rad * Math.sin(v) * Math.cos(u);
-                py = rad * Math.sin(v) * Math.sin(u) + 3.5; // Offset Y
+                py = rad * Math.sin(v) * Math.sin(u) + 3.5;
                 pz = rad * Math.cos(v);
-            } else if (r < 0.60) { // Torso
+            } else if (r < 0.60) {
                 const u = Math.random() * Math.PI * 2;
                 const h = (Math.random() - 0.5) * 5;
-                const rad = 2.5 * (1 - Math.abs(h)/6); // Tapering
+                const rad = 2.5 * (1 - Math.abs(h) / 6);
                 px = rad * Math.cos(u);
-                py = h; 
+                py = h;
                 pz = rad * Math.sin(u);
-            } else { // Pernas/Base (Disco achatado e largo)
+            } else {
                 const angle = Math.random() * Math.PI * 2;
                 const rad = 2 + Math.random() * 4;
                 px = rad * Math.cos(angle);
@@ -187,14 +177,13 @@ function setTextShape() {
     const ctx = textCanvas.getContext('2d');
     textCanvas.width = 400;
     textCanvas.height = 200;
-    
+
     ctx.fillStyle = 'black';
-    ctx.fillRect(0,0, 400, 200);
+    ctx.fillRect(0, 0, 400, 200);
     ctx.fillStyle = 'white';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
-    // Renderiza Texto
+
     ctx.font = 'bold 50px Arial';
     ctx.fillText("Álgebra", 200, 70);
     ctx.font = 'bold 55px Arial Black';
@@ -203,15 +192,14 @@ function setTextShape() {
 
     const imageData = ctx.getImageData(0, 0, 400, 200);
     const data = imageData.data;
-    
-    // Encontrar pixels válidos
+
     const validPixels = [];
-    for(let y=0; y<200; y+=2) { // Step 2 para performance
-        for(let x=0; x<400; x+=2) {
+    for (let y = 0; y < 200; y += 2) {
+        for (let x = 0; x < 400; x += 2) {
             const i = (y * 400 + x) * 4;
-            if(data[i] > 50) { // Se pixel for brilhante
+            if (data[i] > 50) {
                 validPixels.push({
-                    x: (x - 200) / 15, // Centralizar e escalar
+                    x: (x - 200) / 15,
                     y: -(y - 100) / 15
                 });
             }
@@ -220,22 +208,19 @@ function setTextShape() {
 
     // Distribuir partículas nos pixels
     let idx = 0;
-    for(let i=0; i<PARTICLE_COUNT; i++) {
-        // Se houver mais partículas que pixels, reusar pixels aleatoriamente
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
         const p = validPixels[Math.floor(Math.random() * validPixels.length)];
-        if(p) {
+        if (p) {
             targetPositions[idx++] = p.x;
             targetPositions[idx++] = p.y;
-            targetPositions[idx++] = (Math.random() - 0.5) * 1; // Leve profundidade
+            targetPositions[idx++] = (Math.random() - 0.5) * 1;
         } else {
-            // Sobra para o infinito
-            targetPositions[idx++] = (Math.random()-0.5)*100;
-            targetPositions[idx++] = (Math.random()-0.5)*100;
-            targetPositions[idx++] = (Math.random()-0.5)*100;
+            targetPositions[idx++] = (Math.random() - 0.5) * 100;
+            targetPositions[idx++] = (Math.random() - 0.5) * 100;
+            targetPositions[idx++] = (Math.random() - 0.5) * 100;
         }
     }
-    
-    // Ajustar zoom automaticamente para caber
+
     state.baseZoom = 15;
     document.getElementById('zoomSlider').value = 15;
 }
@@ -266,6 +251,17 @@ const videoElement = document.getElementById('debug-video');
 const canvasElement = document.getElementById('debug-canvas');
 const canvasCtx = canvasElement.getContext('2d');
 
+// Canvas overlay fullscreen para o esqueleto da mão
+const handOverlay = document.getElementById('hand-overlay');
+const overlayCtx = handOverlay.getContext('2d');
+
+function resizeOverlay() {
+    handOverlay.width = window.innerWidth;
+    handOverlay.height = window.innerHeight;
+}
+resizeOverlay();
+window.addEventListener('resize', resizeOverlay);
+
 function onResults(results) {
     document.getElementById('loader').style.display = 'none';
 
@@ -276,14 +272,13 @@ function onResults(results) {
             canvasElement.width = results.image.width;
             canvasElement.height = results.image.height;
         }
-
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
         if (results.multiHandLandmarks) {
             for (const landmarks of results.multiHandLandmarks) {
-                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 2});
-                drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 1});
+                drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00FF00', lineWidth: 2 });
+                drawLandmarks(canvasCtx, landmarks, { color: '#FF0000', lineWidth: 1 });
             }
         }
         canvasCtx.restore();
@@ -291,84 +286,232 @@ function onResults(results) {
 
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
-        
-        // 1. Detectar se mão está aberta ou fechada (Fist detection)
-        // CORREÇÃO: Usar proporção relativa em vez de distância absoluta para suportar Z-depth
+
+        // 1. Detectar se mão está aberta ou fechada
         const wrist = landmarks[0];
-        const middleBase = landmarks[9]; // Ponto de referência para escala
+        const middleBase = landmarks[9];
         const middleTip = landmarks[12];
 
-        // Tamanho da mão na tela (usado para normalizar a distância)
         const handScale = Math.hypot(middleBase.x - wrist.x, middleBase.y - wrist.y);
-        
-        // Distância da ponta ao pulso
         const tipDistance = Math.hypot(middleTip.x - wrist.x, middleTip.y - wrist.y);
-        
-        // Razão de abertura independente da distância da câmera
-        // Geralmente: > 1.6 é aberta, < 1.2 é fechada
         const openRatio = tipDistance / handScale;
-        
-        // Limiar calibrado relativo
-        const isClosed = openRatio < 1.3; 
-        
+        const isClosed = openRatio < 1.3;
         state.isHandClosed = isClosed;
 
-        // Alvo da explosão: Se fechado (0), forma unida. Se aberto (1), explode.
-        // Mas a lógica do usuário é: Aberto = Explosão. Fechado = Unir.
-        // Logo: isClosed=true -> factor=0. isClosed=false -> factor=1.
-        // Usamos Lerp no loop de animação para suavizar.
+        // 2. Detectar gesto de APONTAR (☝️ só o indicador esticado)
+        // Lógica: se a ponta do dedo (tip) está ACIMA da articulação do meio (PIP),
+        // o dedo está esticado. Em coordenadas MediaPipe, y=0 é o topo da tela.
+        const fingerExtended = (tipIdx, pipIdx) => landmarks[tipIdx].y < landmarks[pipIdx].y;
 
-        // 2. Rotação (Inércia)
-        // Espelhar movimento: x invertido
-        const currentX = (1 - landmarks[9].x) * 2 - 1; // Centralizado -1 a 1
-        const currentY = -(landmarks[9].y * 2 - 1);    // Centralizado -1 a 1
+        const indexExtended = fingerExtended(8, 6);  // indicador
+        const middleExtended = fingerExtended(12, 10); // médio
+        const ringExtended = fingerExtended(16, 14); // anelar
+        const pinkyExtended = fingerExtended(20, 18); // mindinho
+
+        // Gesto de apontar = indicador esticado + médio, anelar e mindinho dobrados
+        const isPointing = indexExtended && !middleExtended && !ringExtended && !pinkyExtended;
+        state.isPointing = isPointing;
+
+        if (isPointing) {
+            const indexTip = landmarks[8];
+
+            // === MAPEAMENTO CORRETO: unproject Three.js ===
+            // Converte a posição 2D da ponta do dedo para NDC (-1 a 1),
+            // depois usa unproject para obter a posição exata no mundo 3D.
+            const ndcX = (1 - indexTip.x) * 2 - 1;   // espelhar X
+            const ndcY = -(indexTip.y * 2 - 1);
+
+            const tipVec = new THREE.Vector3(ndcX, ndcY, 0.5);
+            tipVec.unproject(camera);
+
+            // Calcular a direção câmera → ponto no mundo
+            const dir = tipVec.sub(camera.position).normalize();
+
+            // Intersectar com o plano Z = 0 (onde as partículas vivem)
+            const distToPlane = -camera.position.z / dir.z;
+            const worldPos = camera.position.clone().addScaledVector(dir, distToPlane);
+
+            // Suavização do ponteiro (elimina jitter da câmera)
+            const smooth = 0.15;
+            state.pointerPos.x += (worldPos.x - state.pointerPos.x) * smooth;
+            state.pointerPos.y += (worldPos.y - state.pointerPos.y) * smooth;
+            state.pointerPos.z = 0;
+
+            // Desenhar esqueleto da mão no overlay fullscreen
+            drawHandSkeleton(landmarks);
+        } else {
+            // Limpar overlay quando não está apontando
+            overlayCtx.clearRect(0, 0, handOverlay.width, handOverlay.height);
+        }
+
+        // 3. Rotação por inércia (só quando mão fechada)
+        const currentX = (1 - landmarks[9].x) * 2 - 1;
+        const currentY = -(landmarks[9].y * 2 - 1);
 
         if (isClosed) {
-            // Mão fechada controla rotação
             state.autoRotate = false;
             const deltaX = currentX - state.prevHandPos.x;
             const deltaY = currentY - state.prevHandPos.y;
-
-            // Sensibilidade
             state.rotationVelocity.x = deltaX * 3;
             state.rotationVelocity.y = deltaY * 3;
-        } else {
-            // Mão aberta, permite que a inércia continue ou auto-rotação leve
-            // Não para imediatamente
         }
 
         state.prevHandPos.x = currentX;
         state.prevHandPos.y = currentY;
 
-        // 3. Zoom (Distância Z estimada)
-        // Baseado na escala da mão (distância pulso -> base do indicador)
+        // 4. Zoom por proximidade da mão
         const indexBase = landmarks[5];
         const scaleDist = Math.hypot(indexBase.x - wrist.x, indexBase.y - wrist.y);
-        
-        // Quanto maior a mão (mais perto), scaleDist aumenta.
-        // Normalizar: 0.1 (longe) a 0.5 (muito perto)
-        // Mapear para Zoom offset: Longe = +ZoomOut, Perto = -ZoomIn
-        const zoomFactor = (scaleDist - 0.2) * 80; // Multiplicador arbitrário
-        
-        // Suavização do Zoom
+        const zoomFactor = (scaleDist - 0.2) * 80;
         state.handZoom += ((-zoomFactor) - state.handZoom) * 0.1;
 
     } else {
-        // Sem mão
+        // Sem mão detectada
         state.isHandClosed = false;
+        state.isPointing = false;
         state.autoRotate = true;
-        state.handZoom += (0 - state.handZoom) * 0.1; // Reset zoom da mão
+        state.handZoom += (0 - state.handZoom) * 0.1;
+        // Limpar overlay quando não há mão
+        overlayCtx.clearRect(0, 0, handOverlay.width, handOverlay.height);
     }
 }
 
-const hands = new Hands({locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-}});
+// --- DESENHAR ESQUELETO DA MÃO NO OVERLAY (VISUAL NEON PREMIUM) ---
+function drawHandSkeleton(landmarks) {
+    overlayCtx.clearRect(0, 0, handOverlay.width, handOverlay.height);
+
+    const W = handOverlay.width;
+    const H = handOverlay.height;
+
+    const lx = (lm) => (1 - lm.x) * W;
+    const ly = (lm) => lm.y * H;
+
+    // Todos os dedos em verde neon
+    const fingerColors = [
+        '#39ff14', // polegar
+        '#39ff14', // indicador
+        '#39ff14', // médio
+        '#39ff14', // anelar
+        '#39ff14', // mindinho
+    ];
+
+    const fingerBones = [
+        [0, 1, 2, 3, 4],
+        [0, 5, 6, 7, 8],
+        [0, 9, 10, 11, 12],
+        [0, 13, 14, 15, 16],
+        [0, 17, 18, 19, 20]
+    ];
+    const palmConnections = [[0, 1], [1, 5], [5, 9], [9, 13], [13, 17], [17, 0]];
+
+    // Função para desenhar um segmento com efeito neon (2 passadas: glow + nítido)
+    function drawNeonLine(x1, y1, x2, y2, color, width) {
+        // Passada 1: glow suave (blur externo)
+        overlayCtx.save();
+        overlayCtx.shadowColor = color;
+        overlayCtx.shadowBlur = 18;
+        overlayCtx.strokeStyle = color;
+        overlayCtx.lineWidth = width + 3;
+        overlayCtx.globalAlpha = 0.35;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(x1, y1);
+        overlayCtx.lineTo(x2, y2);
+        overlayCtx.stroke();
+
+        // Passada 2: linha nítida central
+        overlayCtx.shadowBlur = 0;
+        overlayCtx.strokeStyle = color;
+        overlayCtx.lineWidth = width;
+        overlayCtx.globalAlpha = 0.9;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(x1, y1);
+        overlayCtx.lineTo(x2, y2);
+        overlayCtx.stroke();
+        overlayCtx.restore();
+    }
+
+    function drawNeonCircle(x, y, radius, color, alpha = 1.0) {
+        overlayCtx.save();
+        overlayCtx.shadowColor = color;
+        overlayCtx.shadowBlur = 20;
+        overlayCtx.fillStyle = color;
+        overlayCtx.globalAlpha = alpha;
+        overlayCtx.beginPath();
+        overlayCtx.arc(x, y, radius, 0, Math.PI * 2);
+        overlayCtx.fill();
+        overlayCtx.restore();
+    }
+
+    overlayCtx.lineCap = 'round';
+    overlayCtx.lineJoin = 'round';
+
+    // Desenhar palma com verde neon
+    for (const [a, b] of palmConnections) {
+        drawNeonLine(lx(landmarks[a]), ly(landmarks[a]), lx(landmarks[b]), ly(landmarks[b]), '#39ff14', 1.5);
+    }
+
+    // Desenhar dedos
+    for (let f = 0; f < fingerBones.length; f++) {
+        const chain = fingerBones[f];
+        const color = fingerColors[f];
+        const width = f === 1 ? 3.5 : 2; // indicador mais grosso
+
+        for (let j = 0; j < chain.length - 1; j++) {
+            const a = chain[j], b = chain[j + 1];
+            drawNeonLine(lx(landmarks[a]), ly(landmarks[a]), lx(landmarks[b]), ly(landmarks[b]), color, width);
+        }
+
+        // Juntas: círculos coloridos em cada ponto
+        for (let j = 1; j < chain.length; j++) {
+            const r = j === chain.length - 1 ? 5 : 3; // ponta maior
+            drawNeonCircle(lx(landmarks[chain[j]]), ly(landmarks[chain[j]]), r, color, 0.9);
+        }
+    }
+
+    // Pulso: círculo especial na base
+    drawNeonCircle(lx(landmarks[0]), ly(landmarks[0]), 6, '#ffffff', 0.6);
+
+    // Halo mágico pulsante na ponta do indicador
+    const tip = landmarks[8];
+    const tx = lx(tip);
+    const ty = ly(tip);
+    const t = Date.now() * 0.003;
+    const pulse = 12 + Math.sin(t) * 5; // raio oscila entre 7 e 17px
+
+    // Anel externo pulsante
+    overlayCtx.save();
+    overlayCtx.shadowColor = '#39ff14';
+    overlayCtx.shadowBlur = 30;
+    overlayCtx.strokeStyle = '#39ff14';
+    overlayCtx.lineWidth = 2;
+    overlayCtx.globalAlpha = 0.6 + Math.sin(t) * 0.3;
+    overlayCtx.beginPath();
+    overlayCtx.arc(tx, ty, pulse, 0, Math.PI * 2);
+    overlayCtx.stroke();
+    overlayCtx.restore();
+
+    // Ponto central brilhante
+    const grad = overlayCtx.createRadialGradient(tx, ty, 0, tx, ty, 22);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+    grad.addColorStop(0.2, 'rgba(57, 255, 20, 0.9)');
+    grad.addColorStop(0.6, 'rgba(0, 200, 0, 0.4)');
+    grad.addColorStop(1, 'rgba(0, 80, 0, 0)');
+    overlayCtx.fillStyle = grad;
+    overlayCtx.beginPath();
+    overlayCtx.arc(tx, ty, 22, 0, Math.PI * 2);
+    overlayCtx.fill();
+}
+
+const hands = new Hands({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+    }
+});
 
 hands.setOptions({
     maxNumHands: 1,
     modelComplexity: 1,
-    minDetectionConfidence: 0.7, // Valores mais altos reduzem falsos positivos e capturam a mão com mais firmeza
+    minDetectionConfidence: 0.7,
     minTrackingConfidence: 0.7
 });
 
@@ -376,15 +519,13 @@ hands.onResults(onResults);
 
 const cameraUtils = new Camera(videoElement, {
     onFrame: async () => {
-        await hands.send({image: videoElement});
+        await hands.send({ image: videoElement });
     },
-    width: 1280, // Resolução HD (16:9) para uma melhor visualização e detecção mais precisa
+    width: 1280,
     height: 720
 });
 
-// Iniciar câmera
 cameraUtils.start();
-
 
 // --- LOOP DE ANIMAÇÃO PRINCIPAL ---
 function animate() {
@@ -393,45 +534,43 @@ function animate() {
     const posAttribute = geometry.attributes.position;
     const currentPositions = posAttribute.array;
 
-    // 1. Gerenciar Estado de Explosão com Suavização (Lerp)
-    // Se mão aberta (not closed), targetExplosion = 1. Se fechada, 0.
+    // 1. Gerenciar explosão com Lerp
     const targetExplosion = state.isHandClosed ? 0 : 1;
-    // Lerp simples: current = current + (target - current) * speed
     state.explosionFactor += (targetExplosion - state.explosionFactor) * 0.05;
 
-    // 2. Física de Rotação (Inércia)
-    particles.rotation.y += state.rotationVelocity.x;
-    particles.rotation.x -= state.rotationVelocity.y;
+    // 2. Física de rotação com inércia
+    if (state.isPointing) {
+        // Em modo pó mágico: zerar rotação suavemente para alinhar coordenadas com a tela
+        particles.rotation.x += (0 - particles.rotation.x) * 0.08;
+        particles.rotation.y += (0 - particles.rotation.y) * 0.08;
+        state.rotationVelocity.x = 0;
+        state.rotationVelocity.y = 0;
+    } else {
+        particles.rotation.y += state.rotationVelocity.x;
+        particles.rotation.x -= state.rotationVelocity.y;
+        state.rotationVelocity.x *= 0.95;
+        state.rotationVelocity.y *= 0.95;
 
-    // Atrito (Friction) para parar devagar
-    state.rotationVelocity.x *= 0.95;
-    state.rotationVelocity.y *= 0.95;
-
-    // Auto-rotação muito lenta se estiver parado e mão não detectada
-    if(Math.abs(state.rotationVelocity.x) < 0.001 && state.autoRotate) {
-        particles.rotation.y += 0.002;
+        if (Math.abs(state.rotationVelocity.x) < 0.001 && state.autoRotate) {
+            particles.rotation.y += 0.009; // velocidade Y
+            particles.rotation.x += 0.004; // inclinação X
+        }
     }
 
-    // 3. Atualizar Partículas
+    // 3. Atualizar posição de cada partícula
     for (let i = 0; i < PARTICLE_COUNT; i++) {
         const ix = i * 3;
         const iy = i * 3 + 1;
         const iz = i * 3 + 2;
 
-        // Posição Alvo (Forma)
-        let tx = targetPositions[ix];
-        let ty = targetPositions[iy];
-        let tz = targetPositions[iz];
+        const tx = targetPositions[ix];
+        const ty = targetPositions[iy];
+        const tz = targetPositions[iz];
 
-        // Posição de Explosão (Caos)
-        // Mistura a posição alvo com um vetor de ruído baseado no fator de explosão
         const rx = randomPositions[ix];
         const ry = randomPositions[iy];
         const rz = randomPositions[iz];
 
-        // Interpolação final da posição
-        // Se explosionFactor for 0, vai para target. Se 1, vai para (target + random).
-        // Adicionamos também um pouco de movimento senoidal para "vida" nas partículas
         const time = Date.now() * 0.001;
         const breathing = Math.sin(time + tx) * 0.05;
 
@@ -439,23 +578,53 @@ function animate() {
         const destY = ty + (ry * state.explosionFactor) + breathing;
         const destZ = tz + (rz * state.explosionFactor);
 
-        // Mover partícula suavemente em direção ao destino (Easing)
-        currentPositions[ix] += (destX - currentPositions[ix]) * 0.08;
-        currentPositions[iy] += (destY - currentPositions[iy]) * 0.08;
-        currentPositions[iz] += (destZ - currentPositions[iz]) * 0.08;
+        if (state.isPointing) {
+            // === PÓ MÁGICO ===
+            const px = state.pointerPos.x;
+            const py = state.pointerPos.y;
+            const pz = state.pointerPos.z;
+
+            // Cada partícula orbita em torno do dedo com raio e fase únicos
+            const phase = particlePhase[i];
+            const orbitR = 1.0 + (phase % 2.5);
+            const dustX = px + Math.sin(time * 1.8 + phase) * orbitR;
+            const dustY = py + Math.cos(time * 1.4 + phase * 1.2) * orbitR * 0.7;
+            const dustZ = pz + Math.sin(time * 1.0 + phase * 0.8) * orbitR * 0.5;
+
+            // Força proporcional à distância (spring-like)
+            const dxP = dustX - currentPositions[ix];
+            const dyP = dustY - currentPositions[iy];
+            const dzP = dustZ - currentPositions[iz];
+            const distSq = dxP * dxP + dyP * dyP + dzP * dzP;
+            const attraction = 0.025 / (1.0 + distSq * 0.01);
+
+            particleVelocities[ix] += dxP * attraction;
+            particleVelocities[ix + 1] += dyP * attraction;
+            particleVelocities[ix + 2] += dzP * attraction;
+
+            // Drag alto = rastro longo e suave
+            const drag = 0.92;
+            particleVelocities[ix] *= drag;
+            particleVelocities[ix + 1] *= drag;
+            particleVelocities[ix + 2] *= drag;
+
+            currentPositions[ix] += particleVelocities[ix];
+            currentPositions[iy] += particleVelocities[ix + 1];
+            currentPositions[iz] += particleVelocities[ix + 2];
+        } else {
+            // MODO NORMAL: animar para a forma alvo
+            currentPositions[ix] += (destX - currentPositions[ix]) * 0.08;
+            currentPositions[iy] += (destY - currentPositions[iy]) * 0.08;
+            currentPositions[iz] += (destZ - currentPositions[iz]) * 0.08;
+        }
     }
 
     posAttribute.needsUpdate = true;
 
-    // 4. Gerenciar Zoom
-    // Zoom Final = Slider Base + Zoom da Mão
+    // 4. Gerenciar zoom
     const targetZoom = state.baseZoom + state.handZoom;
-    // Suavizar câmera
     state.currentZoom += (targetZoom - state.currentZoom) * 0.1;
-    
-    // Limites de segurança
-    if(state.currentZoom < 1) state.currentZoom = 1;
-    
+    if (state.currentZoom < 1) state.currentZoom = 1;
     camera.position.z = state.currentZoom;
 
     renderer.render(scene, camera);
